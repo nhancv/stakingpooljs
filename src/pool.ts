@@ -58,13 +58,18 @@ export class StakingPool {
     this.paused = false;
   }
 
-  // Deposit staked tokens and collect reward tokens (if any)
+  // Deposit staked tokens. Auto generate deposit id
   depositTokens(staker: string, amount: number) {
-    if (now() < this.startTime || now() > this.endTime) {
-      throw new Error('Invalid time');
-    }
+    this.depositTokensWithId(staker, amount, Number.MAX_VALUE);
+  }
+
+  // Deposit staked tokens with deposit id
+  depositTokensWithId(staker: string, amount: number, depositId: number) {
     if (this.paused) {
       throw new Error('Deposit is frozen');
+    }
+    if (now() < this.startTime || now() > this.endTime) {
+      throw new Error('Invalid time');
     }
     if (amount <= 0) {
       throw new Error('Invalid amount');
@@ -78,14 +83,13 @@ export class StakingPool {
       };
     }
 
-    const user = this.userInfos[staker];
-    if (amount + user.totalAmount < 100) {
-      throw new Error('User amount below minimum');
-    }
-
     this._updatePool();
 
-    const depositId = user.nextDepositId++;
+    const user = this.userInfos[staker];
+    if (depositId >= user.nextDepositId) {
+      depositId = user.nextDepositId++;
+    }
+
     // Create default deposit info if not exists
     if (!this.depositInfos[staker]) {
       this.depositInfos[staker] = {};
@@ -179,38 +183,15 @@ export class StakingPool {
     console.log(`Add ${amount} tokens to the reward pool`);
   }
 
-  // Update reward per second
-  setRewardPerSecond(rewardPerSecond: number) {
-    this._updatePool();
-    this.rewardPerSecond = rewardPerSecond;
-  }
-
-  // It allows the admin to update start and end time
-  setStartAndEndTimes(startTime: number, endTime: number) {
-    if (now() > this.endTime) {
-      throw new Error('Pool has started');
-    }
-    if (startTime >= endTime) {
-      throw new Error('Invalid start and end block');
-    }
-    this.endTime = endTime;
-    if (startTime > now()) {
-      this.startTime = startTime;
-      this.lastRewardTime = startTime;
-    }
-  }
-
   // Update reward variables of the given pool to be up-to-date.
   private _updatePool() {
-    if (now() <= this.lastRewardTime) {
-      return;
-    }
-
     if (this.totalStakingTokens === 0) {
       this.lastRewardTime = now();
       return;
     }
-
+    if (now() <= this.lastRewardTime) {
+      return;
+    }
     const multiplier = this._getMultiplier(this.lastRewardTime, now());
     const tokenReward = multiplier * this.rewardPerSecond;
     this.accTokenPerShare += tokenReward / this.totalStakingTokens;
@@ -233,7 +214,7 @@ export class StakingPool {
     const rewardTokenBal = this.totalRewardTokens;
     const safeAmount = Math.round(amount * 1e4) / 1e4; // 4 decimal places
     if (rewardTokenBal < safeAmount) {
-      throw new Error(`Not enough reward tokens: ${rewardTokenBal} < ${safeAmount}`);
+      throw new Error('Not enough reward tokens');
     }
     this.totalRewardTokens -= safeAmount;
     this.rewardToken.transfer(POOL_ID, to, safeAmount);

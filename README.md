@@ -3,18 +3,9 @@
 ## Install dep
 
 ```
-git clone git@github.com.....
+git clone https://github.com/nhancv/stakingpooljs
 cd stakingpooljs
 yarn install
-```
-
-## Prepare environment config
-
-```
-cp .env.example .env
-
-# Update .env content
-# Setup other secret configs as well
 ```
 
 ## Local dev
@@ -35,4 +26,18 @@ yarn start:dev
 
 ```
 yarn build
+```
+
+## Test
+
+- Run test
+
+```
+yarn test
+```
+
+- Run test coverage
+
+```
+yarn test:cov
 ```
