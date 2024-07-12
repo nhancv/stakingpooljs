@@ -65,25 +65,16 @@ export class StakingPool {
 
   // Deposit staked tokens with deposit id
   depositTokensWithId(staker: string, amount: number, depositId: number) {
-    if (this.paused) {
-      throw new Error('Deposit is frozen');
-    }
-    if (now() < this.startTime || now() > this.endTime) {
-      throw new Error('Invalid time');
-    }
-    if (amount <= 0) {
-      throw new Error('Invalid amount');
-    }
+    if (this.paused) throw new Error('Deposit is frozen');
+    if (now() < this.startTime || now() > this.endTime) throw new Error('Invalid time');
+    if (amount <= 0) throw new Error('Invalid amount');
+
+    this._updatePool();
 
     // Create default user info if not exists
     if (!this.userInfos[staker]) {
-      this.userInfos[staker] = {
-        totalAmount: 0,
-        nextDepositId: 0,
-      };
+      this.userInfos[staker] = { totalAmount: 0, nextDepositId: 0 };
     }
-
-    this._updatePool();
 
     const user = this.userInfos[staker];
     if (depositId >= user.nextDepositId) {
@@ -124,19 +115,12 @@ export class StakingPool {
 
   // Withdraw staked tokens and collect reward tokens
   withdrawTokens(staker: string, amount: number, depositId: number) {
-    if (this.paused) {
-      throw new Error('Withdraw is frozen');
-    }
-    if (amount <= 0) {
-      throw new Error('Invalid amount');
-    }
+    if (this.paused) throw new Error('Withdraw is frozen');
+    if (amount <= 0) throw new Error('Invalid amount');
+
     const deposit = this.depositInfos[staker][depositId];
-    if (deposit.amount < amount) {
-      throw new Error('Amount to withdraw too high');
-    }
-    if (now() < deposit.lockTo) {
-      throw new Error('Invalid time to withdraw');
-    }
+    if (deposit.amount < amount) throw new Error('Amount to withdraw too high');
+    if (now() < deposit.lockTo) throw new Error('Invalid time to withdraw');
 
     this._updatePool();
 
@@ -213,9 +197,8 @@ export class StakingPool {
   private _safeRewardTransfer(to: string, amount: number) {
     const rewardTokenBal = this.totalRewardTokens;
     const safeAmount = Math.round(amount * 1e4) / 1e4; // 4 decimal places
-    if (rewardTokenBal < safeAmount) {
-      throw new Error('Not enough reward tokens');
-    }
+    if (rewardTokenBal < safeAmount) throw new Error('Not enough reward tokens');
+
     this.totalRewardTokens -= safeAmount;
     this.rewardToken.transfer(POOL_ID, to, safeAmount);
     console.log(`Transfer ${safeAmount} rewards to ${to}`);
